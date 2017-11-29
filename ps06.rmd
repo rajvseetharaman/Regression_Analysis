@@ -1,0 +1,522 @@
+---
+title: 'INFX 573: Problem Set 6 - Regression'
+author: "Rajendran Seetharaman"
+date: 'Due: Tuesday, November 21, 2017'
+output: pdf_document
+---
+
+# Problem Set 6
+
+## Collaborators: 
+
+## Instructions: 
+
+Before beginning this assignment, please ensure you have access to R and RStudio. 
+
+1. Replace the "Insert Your Name Here" text in the `author:` field
+   with your own name.  List all collaborators on the
+   top of your assignment.
+
+3. Be sure to include well-documented (e.g. commented) code chucks,
+   figures and clearly written text chunk explanations as
+   necessary. Any figures should be clearly labeled and appropriately
+   referenced within the text.
+
+4. Collaboration on problem sets is fun and useful
+   but turn in an individual write-up in your
+   own words and involving your own code.  Do not just copy-and-paste from others'
+   responses or code.
+
+5. When you have completed the assignment and have **checked** that
+   your code both runs in the Console and knits correctly when you
+   click `Knit PDF`, rename the R Markdown file to
+   `YourLastName_YourFirstName_ps6.Rmd`, knit a PDF and submit the PDF
+   file on Canvas.
+
+
+## 1. Housing Values in Suburbs of Boston
+
+In this problem we will use the Boston dataset that is available in _MASS_
+package. This dataset contains information about
+median house value for 506 neighborhoods in Boston, MA. 
+
+```{r}
+library(MASS)
+```
+
+### 1.1 Describe data
+
+Describe the data and variables that are part of the _Boston_
+   dataset.  Tidy data as necessary.
+   
+```{r}
+library(tidyverse)
+#convert chas to a categorical variable for analysis
+Boston <- Boston %>% mutate(chas=as.factor(chas))
+```
+
+Ans. The Boston dataset contains information collected by the U.S Census Service concerning housing in the area of Boston Mass. It has 506 case records, one for each of the census tracts in the Boston area, with 14 attributes per case.
+
+The dataset has the following variables-
+crim- Per capita crime rate per town
+zn- proportion of residential land zoned for lots over 25,000 sq.ft
+indus- proportion of non-retail business acres per town
+chas- Charles River dummy variable (1 if tract bounds river; 0 otherwise)
+nox- nitric oxides concentration (parts per 10 million)
+rm- average number of rooms per dwelling
+age- proportion of owner-occupied units built prior to 1940
+dis- weighted distances to five Boston employment centres
+rad- index of accessibility to radial highways
+tax- full-value property-tax rate per $10,000
+ptratio- pupil-teacher ratio by town
+black- 1000(Bk - 0.63)^2 where Bk is the proportion of blacks by town
+lstat- lower status of the population (percent).
+medv- Median value of owner-occupied homes in $1000's
+
+Source:
+Harrison, D. and Rubinfeld, D.L. (1978) Hedonic prices and the demand for clean air. J. Environ. Economics and Management 5, 81-102.
+
+Belsley D.A., Kuh, E. and Welsch, R.E. (1980) Regression Diagnostics. Identifying Influential Data and Sources of Collinearity. New York: Wiley.
+
+### 1.2 Variable of interest
+
+Consider this data in context, what is the response variable
+of interest? Discuss how you think some of the possible predictor
+variables might be associated with this response.
+
+Ans. The response variable of interest here is the median value of owner occupied homes (medv)
+Several of the variables in the dataset could be possible predictor variables which might be associated with the median house price.
+The per capita crime rate could be one possible predictor, more the crime rate, lesser the median price.
+The proportion of residential and business acres could be two other predictors. More business acres could indicate higher development, leading to higher house prices.
+Proximity to the charles river could be another predictor, houses in proximity to Charles might have higher median prices.
+Nox concentration might indicate pollution levels, higher nox concentration could lead tolower prices.
+The number of rooms in the dwelling would very likely influence the median prices of the homes. More the rooms, greater the price.
+The proximity to employment centres and radial highways might also drive up the home prices.
+High property tax rates might also drive up the median prices.
+pupil teacher ratio could be a predictor, but it is not very certain as parents generally prefer lower pupil teacher ratios, but major cities with higher house prices generally have big schools with high pupil teacher ratio.
+The number of blacks might influence prices but it is not certain
+The percent lower status of the population might very likely influence median prices. Prices with a higher proportion of lower status people might be lower.
+The proportion of owner occupied units might influence the price.
+
+### 1.3 Simple Regression
+
+For each predictor, fit a simple linear regression model to predict
+the response. In which of the models is there a statistically
+significant association between the predictor and the response? Create
+some plots to back up your assertions.
+
+Ans. The data indicates that each of the predictor variables is statistically significant while attempting to determine an association with the response variables. The p values for each of the 13 predictors is extremely small except for the charles river dummy variable which also has a small p value. 
+
+Although each of the variables are statistically significant, the small adjusted R squared value for all of the models indicates that each of these variables individually only describe a small variation in the response, so a model with multiple predictors might work better.
+
+
+```{r}
+library(tidyverse)
+col_lst <- colnames(Boston)
+#get a list of all columns except median price
+col_lst <- col_lst[1:length(col_lst)-1]
+#function to create linear model with predictor as x for outcome medv
+lin_model <- function(x)
+  {
+    pred_mod <- lm(medv ~ get(x),data=Boston)
+    return(pred_mod)
+}
+#run function for each of the 13 predictors to get individual models and summary of models
+prediction_model <- lapply(col_lst,lin_model)
+lapply(prediction_model,function(x){summary(x)})
+#function to create plot of individual predictor against outcome
+plotfunc <- function(i)
+{ggplot(data=Boston,aes_string(x=colnames(Boston[i]),y=colnames(Boston[14])))+
+    geom_point()+geom_smooth(method='lm')}
+lapply(seq(col_lst),plotfunc)
+
+
+```
+
+
+
+### 1.4 Multiple Regression
+
+Make sure you are familiar with multiple regression (Openintro
+Statistics, Ch 8.1-8.3).
+
+Fit a multiple regression model to predict the response using all of
+the predictors. Describe your results. For which predictors can we
+reject the null hypothesis $H_0: \beta_j = 0$?
+
+Ans. When we use all the predictors, the resulting model performs much better than each of the models where the response variable is associated with a single predictor variable. This is indicated by a high adjusted R squared value of 0.7338 which indicates the strength of the fit. This means that there was a 73.38% reduction in the variation of the data by using the additional variables in the model. The residual standard error is 4.745 on 492 degrees of freedom. The data indicates that the variables crime rate, nox concentration, distance from employment centres, taxation, pupil teacher ratio, and lower status of popultation have a negative correlation with median house prices, while the rest of the variables have a positive correlation. The data suggests that for every unit increase in crime rate, the median house price goes down by 1.080e-01 (Standard error- 5.103e+00 and t-value- 7.144) . (Similar interpretations can be made of the coefficients of the other 12 predictors) 
+
+As all of the predictor p values fall below the critical p value of 0.05 for a 95% confidence interval, we can reject the null hypothesis for all of the above predictors except for indus and age, for which the p value falls above the critical p value of 0.05.  
+
+```{r}
+#create multiple regression model for all 13 predictors combined in a linear fashion
+multi_model <- lm(data=Boston,medv ~ crim + zn + indus + chas + nox + 
+                    rm + age + dis + rad + tax + ptratio + black + lstat)
+summary(multi_model)
+```
+
+### 1.5 Compare Regressions
+
+How do your results from (3) compare to your results from (4)? Create
+a plot displaying the univariate regression coefficients from (3) on
+the x-axis and the multiple regression coefficients from part (4) on
+the y-axis. Use this visualization to support your response.
+
+Ans. When we use all the predictors, the resulting model performs much better than each of the models where the response variable is associated with a single predictor variable. This is indicated by a high adjusted R squared value of 0.7338 which indicates the strength of the fit. This means that there was a 73.38% reduction in the variation of the data by using the additional variables in the model. Also, while the univariate regression model suggests that all predictors might be statistically significant, the p values of the multi regression model suggest that indus and age are not statistically significant as their p values are above 0.05.
+
+```{r}
+# create a plot of multiple regression coefficients against univariate coefficients
+multi_model$coefficients[2:14]
+ind_coeff <- list()
+for(i in prediction_model)
+{
+  ind_coeff <- append(ind_coeff,i$coefficients[2])
+}
+ind_coeff <- unlist(ind_coeff)
+print(ind_coeff)
+plot(ind_coeff, multi_model$coefficients[2:14], xlab = 'Univariate', ylab = 'Multiple')
+```
+
+### 1.6 Non-linearities
+
+Is there evidence of a non-linear association between any of the
+predictors and the response? To answer this question, for each
+predictor $X$ fit a model of the form:
+
+$$ Y = \beta_0 + \beta_1 X + \beta_2 X^2 + \beta_3 X^3 + \epsilon $$
+
+Ans. 
+
+Approach 1: Using p values of coefficients of squared anc cubed terms. Checking which p values of squared or cubed terms in all the models is lower than the critical p value of 0.05, the predictors - crim, zn, indus, nox, rm, dis, rad, lstat seem to have a non linear relationship with median house prices (medv).
+
+Approach 2: Using metric R square
+The data seems to present evidence that there might be a strong non linear relationship between the variables rm and medv, and lstat and medv. This is indicated by moderately high R squared values (Good model fit) when non linear models are fit on these 2 variables. The non linear model fit using average number of rooms (rm) has an R squared value of 0.5586 (Adjusted) and the linear model fit using the lower status proportion variable (lstat) has an R squared value of 0.6558 (Adjusted).  
+
+
+```{r}
+# create univariate non linear model for each of the predictors except chas 
+for(i in col_lst)
+{
+  if(i!='chas')
+  {
+  non_linear_mod <- lm(data=Boston,medv ~ I(get(i)) + I((get(i))^2) + I((get(i))^3))
+  print(i)
+  print(summary(non_linear_mod))
+  }
+
+}
+```
+
+### 1.7 Stepwise Model Selection
+
+Consider performing a stepwise model selection procedure to determine
+the best fit model (consult Openintro Statistics, 8.2.2).  Discuss
+your results. How is this model different from the model in (4)?
+
+Ans. This model eliminates the predictors age and indus from the multiple regression model. The resulting model seems to be more accurate as the adjusted R squared value of the model has gone up to 0.7348, indicating a better model fit. 
+
+I have used 2 methods, the stepAIC function and the forward selection method based on R squared values for this question. Both lead to the same model
+
+1. StepAIC function method
+```{r}
+#create model using backward elemination using the stepAIC function and the AIC metric 
+stepwise_model <- stepAIC(multi_model,direction = 'backward')
+print(summary(stepwise_model))
+```
+2. Forward selection method based on R squaed values
+```{r}
+#create stepwise model using forward selection
+#choose predictors which increase r squared value
+for(i in col_lst)
+{
+  print(i)
+  print(summary(lm(data=Boston,medv ~ get(i)))$r.squared)
+}
+print('adding lstat to model as it has highest 
+      r squared value of 0.5441463')
+for(i in col_lst)
+{
+  print(i)
+  print(summary(lm(data=Boston,medv ~ lstat + get(i)))$r.squared)
+}
+print('adding rm to model as it increases the r 
+      squared value the greatest to 0.6385616')
+for(i in col_lst)
+{
+  print(i)
+  print(summary(lm(data=Boston,medv ~ lstat + rm + get(i)))$r.squared)
+}
+print('adding ptratio to model as it increases the 
+      r squared value the greatest to 0.6786242')
+for(i in col_lst)
+{
+  print(i)
+  print(summary(lm(data=Boston,medv ~ lstat + rm + 
+                     ptratio + get(i)))$r.squared)
+}
+print('adding dis to model as it increases the 
+      r squared value the greatest to 0.6903077')
+for(i in col_lst)
+{
+  print(i)
+  print(summary(lm(data=Boston,medv ~ lstat + rm + 
+                     ptratio + dis + get(i)))$r.squared)
+}
+print('adding nox to model as it increases the 
+      r squared value the greatest to 0.7080893')
+for(i in col_lst)
+{
+  print(i)
+  print(summary(lm(data=Boston,medv ~ lstat + rm + 
+                     ptratio + dis + nox + get(i)))$r.squared)
+}
+print('adding chas to model as it increases the 
+      r squared value the greatest to 0.7157742')
+for(i in col_lst)
+{
+  print(i)
+  print(summary(lm(data=Boston,medv ~ lstat + rm + 
+                     ptratio + dis + nox + chas 
+                   + get(i)))$r.squared)
+}
+print('adding black to model as it increases the 
+      r squared value the greatest to 0.7221614')
+for(i in col_lst)
+{
+  print(i)
+  print(summary(lm(data=Boston,medv ~ lstat + rm + 
+                     ptratio + dis + nox + chas + 
+                     black + get(i)))$r.squared)
+}
+print('adding zn to model as it increases the 
+      r squared value the greatest to 0.7266079')
+for(i in col_lst)
+{
+  print(i)
+  print(summary(lm(data=Boston,medv ~ lstat + rm + 
+                     ptratio + dis + nox + chas + 
+                     black + zn + get(i)))$r.squared)
+}
+print('adding crim to model as it increases the 
+      r squared value the greatest to 0.7288251')
+for(i in col_lst)
+{
+  print(i)
+  print(summary(lm(data=Boston,medv ~ lstat + rm + 
+                     ptratio + dis + nox + chas + 
+                     black + zn + crim + get(i)))$r.squared)
+}
+print('adding rad to model as it increases the 
+      r squared value the greatest to  0.7341768')
+for(i in col_lst)
+{
+  print(i)
+  print(summary(lm(data=Boston,medv ~ lstat + rm + 
+                     ptratio + dis + nox + chas + 
+                     black + zn + crim + rad + get(i)))$r.squared)
+}
+print('adding tax to model as it increases the 
+      r squared value the greatest to 0.7405823')
+for(i in col_lst)
+{
+  print(i)
+  print(summary(lm(data=Boston,medv ~ lstat + rm + 
+                     ptratio + dis + nox + chas + black + zn + 
+                     crim + rad + tax + get(i)))$r.squared)
+}
+print('As model r squared is not improving any 
+      further, this is the optimal stepwise selected model')
+stepwise_model1 <- lm(data=Boston,medv ~ lstat + rm + 
+                        ptratio + dis + nox + 
+                        chas + black + zn + crim + rad + tax)
+print(summary(stepwise_model1))
+```
+
+
+
+
+### 1.8 Do Assumptions Hold?
+
+Evaluate the statistical assumptions in your regression analysis from
+(1.7) by performing a basic analysis of model residuals and any unusual
+observations (consult Openintro Statistics 7.2).  Discuss any concerns you have about your model.
+
+Ans. 
+The statistical assumptions in the analysis are  Normality, Homoscedasticity, Independence, and Linearity.
+
+1. The QQ plot of the residuals is shown below in #1. There is a slight deviation from the normal distribution at the right end which indicates that the residuals might not be normally distributed, which violates the assumptions of the analysis.
+
+2. Absolute values of residuals against fitted values #2 - There is a slight dip in the variance of residuals vs the fitted values for certain values of fitted values which violates the constant variance assumption for the linear model. It also suggests that the model might not be a linear one.
+
+3. Residuals in order of data collection- In order to check if residuals are independent, residuals are plotted in the order of data collection in #3. The assumption is that the data records in Boston dataset are ordered in the order of data collection. The data seems to indicate that consecutive observations tend to be close to each other, violating the statistical assumptions of the analysis. But there are clear deviations from this trend around observations 150 and 370, indicating that successive observations may in fact not be related, and there is no clear evidence that consecutive observations are related to each other.
+
+4. Residuals plotted against each predictor variable- For the variables rm and lstat, the curvature in the plot of residuals indicates that the relationship with these variables might not be linear, which is also indicated by the previous questions. There is also a slight curvature in the plot of the residuals crim, zn, rad, dis which might indicate that the relationship of these variables with median value of homes might not be linear. This might violate the assumptions of the analysis that all predictors are mostly linearly associated with the response variable.
+
+```{r}
+#checking for the linearmodel assumptions using plots
+mod_residuals <- stepwise_model1$residuals
+fitted_vals <- stepwise_model1$fitted.values
+mod_pred <- col_lst[col_lst != 'age' & col_lst!='indus']
+
+#checking for normal dist and homoedasticity
+#1,2
+plot(stepwise_model1)
+#checking for independency
+#3
+ggplot()+geom_point(data=Boston,aes(x=1:nrow(Boston),y=mod_residuals))+
+  ggtitle("residuals in order of data collection")
+#checking for linearity
+#4
+for(i in mod_pred)
+{
+print(ggplot()+geom_point(data=Boston,
+                          aes(x=get(i),y=mod_residuals))+ggtitle(i))  
+}
+```
+
+
+## 2.  Diamonds' Price
+
+Let's look at the _diamonds_ dataset from _ggplot2_ package.  Your
+task is to find which parameters influence the price of diamonds.
+
+I recommend to transform the ordered factors (such as _cut_, _clarity_) to
+unordered factors with a command like `factor(cut, ordered=FALSE)` in order to
+give more easily interpretable results.
+
+```{r}
+#transfrom categorical variables to unordered factors
+library(tidyverse)
+library(ggplot2)
+diamonds1 <- ggplot2::diamonds %>% 
+  mutate(cut=factor(cut, ordered=FALSE),
+         clarity=factor(clarity,ordered=FALSE),
+         color=factor(color,ordered=FALSE))
+str(diamonds1)
+```
+
+### 2.1 Describe the variables.
+
+What do you think, which variables are relevant in determining the
+price?  Describe your thought before you do any formal analysis.
+
+Ans.
+It is a dataset containing the prices and other attributes of almost 54,000
+diamonds. It has 53940 rows and 10 variables. 
+
+The variables in the dataset are
+price: price in US dollars of the diamond
+carat: weight of the diamond 
+cut: quality of the cut (Fair, Good, Very Good,Premium, Ideal) 
+color: diamond colour, from J (worst) to D (best) 
+clarity: A measurement of how clear the diamond is 
+(I1 (worst), SI2, SI1, VS2, VS1, VVS2, VVS1, IF (best)) 
+x: length in mm 
+y: width in mm
+z: depth in mm 
+depth: total depth percentage = z / mean(x, y) = 2 * z / (x + y)
+table: width of top of diamond relative to widest point
+
+Source: http://ggplot2.tidyverse.org/reference/diamonds.html
+
+I feel that the variables which might have the strongest association with the price of the diamond are carat, color, cut, and clarity of the diamond. The x,y,z, depth percentage, and table might also be associated as these variables indicate the volume of the diamond, which i feel might strongly associated with the diamond price.
+
+### 2.2 Multiple regression
+
+Select a number of variables you consider the most relevant.  Estimate
+a multiple regression model in the form
+
+$$ \text{price}_i = \beta_0 + \beta_1 X_{1i} + \beta_2 X_{2i} +
+\dots + \epsilon_i. $$
+
+Interpret the coefficient values.
+
+* if you are able to, give the literal interpretation of the numeric
+  value
+* if there is no easy literal interpretation, broadly explain what it
+  means, and interpret at least the sign.
+  
+Ans. The intercept has no literal interpretation as a diamond would never weigh 0 carats, have all the size dimensions as 0, and not belong to any of the color, cut, clarity combinations.
+For the color characteristic, having a color in the set [E,F,H,I,J] would signify a change in the price of the diamond by  [-209.118,-272.854,-482.039,-980.267,-1466.244,-2369.398] respectively. This indicates that other factors kept constant, the prices for diamonds might take the following order- E>F>G>H>I>J.
+A similar thing can be said about the clarity and cut categorical predictors using the respective beta estmates.
+For the carat predictor, a unit change in the carat value of the diamond signifies a price change of 11256.978 units. A similar kind of thing could be said about the relationship between the quantitative variables x,y,z, depth, and table using the respective values of the beta estimates.
+
+```{r}
+#create linear model
+diamond_model <- lm(data=diamonds1, price ~ carat+color+cut+
+                      clarity+x+y+z+table+depth)
+summary(diamond_model)
+```
+
+### 2.3 Other specifications
+
+Select 2-3 different sets of explanatory variables or change the model
+specification in other ways, for instance by using log of the outcome
+or explanatory variables, adding interactions and squares, cubes of
+the variables, normalizing variables, or something else.
+
+Which specification gives you the highest $R^2$?  Comment your results.
+
+Ans. diamond_model2 below gives the highest r squared value of 0.9701. It relates the log value of the outcome with a linear combination of predictors. This might be because the price of the diamond probably might have somewhat of exponential relationship with the predictors.  
+The other models give r squared values of 0.9198 and 0.9049 for diamond_model1 and diamond_model3 respectively. This might be because the price might not have a strong linear linear relationship with all variables. 
+
+```{r}
+ggplot(data=diamonds1,aes(x=carat,y=price))+
+  geom_point()+geom_smooth(method = 'lm')
+```
+
+```{r}
+# create 3 models to compare the goodness of fit of each model
+diamond_model1 <- lm(data=diamonds1, price ~ carat+
+                       color+cut+clarity+x+table+depth)
+summary(diamond_model1)
+diamond_model2 <- lm(data=diamonds1, I(log(price)) ~ carat+
+                       color+cut+clarity+x+y+z+table+depth)
+summary(diamond_model2)
+diamond_model3 <- lm(data=diamonds1, price ~ I((carat)^2) + 
+                       color+cut+clarity+x+table+depth)
+summary(diamond_model3)
+```
+
+
+### 2.4 Visualize your best model
+
+Visualize your best and your worst model's predictions on a
+true-predicted price scatterplot.  Explain the differences.
+
+Ans. My best model, diamond_model2's predicted prices when plotted against the true values of diamond prices give fairly accurate predictions for the data used to train the model. Since its R squared value is higher, it has a higher chance of better fitting the training data set.
+
+My worst model, diamond_model3's predicted prices when plotted against the true values of diamond prices give somewhat accurate predictions for the data used to train the model, but its accuracy seems to be clearly lower that diamond_model2. Since its R squared value is lower than diamond_model2, it has a lower chance of fitting the training data set well when compared to the previous model.
+
+Both models have some very clear outliers which show large deviations from the true price.
+
+
+```{r}
+#visualize best model
+ggplot(mapping=aes(x=exp(diamond_model2$fitted.values),
+                   y=diamonds1$price))+geom_point()
+#visualize worst model
+ggplot(mapping=aes(x=diamond_model3$fitted.values,
+                   y=diamonds1$price))+geom_point()
+```
+
+### 2.5 Residuals
+
+* Show the distribution of residuals (difference between the actual and
+  predicted price).  Does it look normal?
+* Analyze a few largest outliers.  Anything special with those diamonds?
+Ans. The QQplot of residuals seems to tend towards a normal distribution with the exception of certain outliers whose price predictions seem to greatly exceed or fall below the predicted price values.
+
+Analyzing a few outliers, these are diamonds who price far exceeds the price predicted by our model, given a certain combination of predictors and our model. There are also diamonds whose price falls below our predictions to a great extent. This might be because our model is inadequete to explain these outliers because for example certain important features may not have been considered in the model, or existing features may not have been modeled properly.
+
+```{r}
+#check distribution of residuals
+qqnorm(diamond_model2$residuals)
+ggplot(mapping=aes(x=diamond_model2$fitted.values,
+                   y=diamond_model2$residuals))+geom_point()
+```
+## 3. How much work?
+
+Tell us, roughly how many hours did you spend on this homework.
+
+Ans. Around 6-7 hours.
